@@ -13,12 +13,10 @@ validator = Hashema::Validator.new(
     { url: 'http://www.blagoblag.com',
       posts: [
         { title: 'hello',
-          permalink: '/hello',
-          comment_count: 1
+          published: true
         },
         { title: 'test',
-          permalink: '/test',
-          comment_count: 0
+          published: false
         }
       ]
     }
@@ -29,8 +27,7 @@ validator = Hashema::Validator.new(
     { url: /^https?:\/\//,
       posts: [
         { title: String,
-          permalink: /^\/[a-zA-Z0-9_\-\+\/]+$/,
-          comment_count: Numeric
+          published: [true, false]
         }
       ]
     }
