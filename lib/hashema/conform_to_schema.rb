@@ -8,7 +8,15 @@ RSpec::Matchers.define :conform_to_schema do |schema|
     @validator.failure_message
   end
 
+  def failure_message_for_should
+    failure_message
+  end
+
   def failure_message_when_negated
     "expected\n#{actual.inspect}\nnot to match schema\n#{schema.inspect}"
+  end
+
+  def failure_message_for_should_not
+    failure_message_when_negated
   end
 end
