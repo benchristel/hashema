@@ -3,6 +3,7 @@ module Hashema
     def initialize(actual, schema)
       @actual = actual
       @schema = schema
+      @withholding_judgement = false
       match! @actual, @schema
     end
 
@@ -31,25 +32,54 @@ module Hashema
     end
 
     def match_hash!(actual, schema, path)
+      if actual.is_a? Hash
+        if schema.keys.sort == actual.keys.sort
+          match_hash_with_same_keys! actual, schema, path
+        else
+          report_mismatched_key_sets! actual, schema, path
+        end
+      else
+        report_error "expected #{format_path path} to be a Hash, but got #{actual.class}"
+        false
+      end
+    end
+
+    def match_hash_with_same_keys!(actual, schema, path)
       recording_mismatches actual, schema, path do
-        schema.keys.sort == actual.keys.sort and
         actual.all? do |key, value|
           match! value, schema[key], path + [key]
         end
       end
     end
 
+    def report_mismatched_key_sets!(actual, schema, path)
+      extras = actual.keys - schema.keys
+      missing = schema.keys - actual.keys
+      error = "expected #{format_path path} to have a different set of keys\n"
+      error += "the extra keys were:\n  #{extras.map(&:inspect).join("\n  ")}\n" if extras.any?
+      error += "the missing keys were:\n  #{missing.map(&:inspect).join("\n  ")}\n" if missing.any?
+      report_error error
+      false
+    end
+
     def match_array!(actual, schema, path)
-      recording_mismatches actual, schema, path do
-        actual.is_a? Array and
-        actual.each_with_index.all? { |elem, i| match! elem, schema[0], path + [i] }
+      if actual.is_a? Array
+        recording_mismatches actual, schema, path do
+          actual.is_a? Array and
+          actual.each_with_index.all? { |elem, i| match! elem, schema[0], path + [i] }
+        end
+      else
+        report_error "expected #{format_path path} to be an Array, but got #{actual.class}"
+        false
       end
     end
 
     def match_alternatives!(actual, alternatives, path)
-      recording_mismatches actual, alternatives, path, true do
+      recording_mismatches actual, alternatives, path do
         alternatives.any? do |alternative|
-          match! actual, alternative, path
+          withholding_judgement actual, alternatives, path do
+            match! actual, alternative, path
+          end
         end
       end
     end
@@ -60,14 +90,31 @@ module Hashema
       end
     end
 
-    def recording_mismatches(actual, schema, path, overwrite=false)
+    def withholding_judgement(actual, schema, path)
+      original_withholding_judgement = @withholding_judgement
+      @withholding_judgement = true
+      returned = yield
+      @withholding_judgement = original_withholding_judgement
+      returned
+    end
+
+    def recording_mismatches(actual, schema, path)
       if yield
         true
       else
-        mismatch = "expected /#{path.join("/")} to match\n#{schema.inspect}\nbut got\n#{actual.inspect}"
-        @mismatch = mismatch if !@mismatch || overwrite
+        report_error "expected #{format_path path} to match\n#{schema.inspect}\nbut got\n#{actual.inspect}"
         false
       end
+    end
+
+    def report_error(error)
+      unless @withholding_judgement
+        @mismatch ||= error
+      end
+    end
+
+    def format_path(path)
+      "/#{path.join("/")}"
     end
   end
 end

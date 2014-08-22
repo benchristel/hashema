@@ -63,6 +63,14 @@ describe "a hash" do
   it "does not match a schema hash if any corresponding values do not match" do
     expect({a: 1, b: 2}).not_to conform_to_schema({a: String, b: Numeric})
   end
+
+  it "does not match an array" do
+    expect({}).not_to conform_to_schema(['squirrel'])
+  end
+
+  it "does not match a number" do
+    expect({}).not_to conform_to_schema(0)
+  end
 end
 
 describe "an array" do
@@ -72,5 +80,13 @@ describe "an array" do
 
   it "does not match a schema array if any of its elements does not match the schema element" do
     expect([1,2,'q']).not_to conform_to_schema([Numeric])
+  end
+
+  it "does not match a hash" do
+    expect([]).not_to conform_to_schema({})
+  end
+
+  it "does not match a number" do
+    expect([]).not_to conform_to_schema(0)
   end
 end
