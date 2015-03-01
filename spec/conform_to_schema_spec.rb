@@ -79,6 +79,12 @@ describe "a hash" do
   it "does not match a number" do
     expect({}).not_to conform_to_schema(0)
   end
+
+  context "with keys of multiple types" do
+    it "matches a hash with the same keys and values" do
+      expect({a: 1, 'b' => 2}).to conform_to_schema({a: 1, 'b' => 2})
+    end
+  end
 end
 
 describe "an array" do

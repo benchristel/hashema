@@ -33,7 +33,7 @@ module Hashema
 
     def match_hash!(actual, schema, path)
       if actual.is_a? Hash
-        if schema.keys.sort == actual.keys.sort
+        if Set.new(schema.keys) == Set.new(actual.keys)
           match_hash_with_same_keys! actual, schema, path
         else
           report_mismatched_key_sets! actual, schema, path
