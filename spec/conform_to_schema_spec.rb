@@ -26,6 +26,14 @@ describe "a number" do
   it "does not match an unequal number" do
     expect(1).not_to conform_to_schema(2)
   end
+
+  it 'matches a range that includes it' do
+    expect(1).to conform_to_schema(0..3)
+  end
+
+  it 'does not match a range that excludes it' do
+    expect(1).not_to conform_to_schema(2..3)
+  end
 end
 
 describe "an object" do
