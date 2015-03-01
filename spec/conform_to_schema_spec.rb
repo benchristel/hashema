@@ -98,3 +98,21 @@ describe "an array" do
     expect([]).not_to conform_to_schema(0)
   end
 end
+
+describe "a mock that expects an object conforming to a schema" do
+  it 'is satisfied by an object with the schema' do
+    mock = double foo: nil
+    expect(mock).to receive(:foo).with an_object_conforming_to_schema bar: String
+
+    mock.foo bar: 'a'
+  end
+end
+
+describe "a mock that does not expect an object conforming to a schema" do
+  it 'is satisfied by an object that violates the schema' do
+    mock = double foo: nil
+    expect(mock).not_to receive(:foo).with an_object_conforming_to_schema bar: String
+
+    mock.foo bar: 'a', buzz: 1
+  end
+end
