@@ -7,22 +7,12 @@ module Hashema
 
   class Comparison < Struct.new(:actual, :expected)
     def match?
-      @match ||= perform
+      mismatches.empty?
     end
 
-    def mismatch_actual
-      match?
-      @mismatch_actual
-    end
-
-    def mismatch_expected
-      match?
-      @mismatch_expected
-    end
-
-    def mismatch_location
-      match?
-      @mismatch_location
+    def mismatches
+      perform unless @mismatches
+      @mismatches
     end
   end
 
@@ -36,12 +26,6 @@ module Hashema
           @mismatches << Mismatch.new(actual, expected, [])
           false
         end
-      end
-
-      def mismatches
-        @mismatches = []
-        match?
-        @mismatches
       end
     end
   end
@@ -79,12 +63,6 @@ module Hashema
             false
           end
         end.all?
-      end
-
-      def mismatches
-        @mismatches = []
-        match?
-        @mismatches
       end
     end
   end
