@@ -1,7 +1,7 @@
 module Hashema
-  class Schema < Struct.new(:ideal)
-    def compare(real)
-      self.class.const_get('Comparison').new(real, ideal)
+  class Schema < Struct.new(:expected)
+    def compare(actual)
+      self.class.const_get('Comparison').new(actual, expected)
     end
   end
 
@@ -26,40 +26,30 @@ module Hashema
   class Array < Schema
     class Comparison < Hashema::Comparison
       def find_mismatches
-        mismatches = type_mismatches
-        if mismatches.empty?
-          mismatches = element_mismatches
-        end
-        mismatches
+        type_mismatches || element_mismatches
       end
 
       def type_mismatches
-        if actual.is_a? ::Array
-          []
-        else
-          [Mismatch.new(actual, ::Array, [])]
-        end
+        actual.is_a?(::Array) ? nil : [Mismatch.new(actual, ::Array, [])]
       end
 
       def element_mismatches
-        mismatches = []
-        actual.each_with_index.map do |actual, i|
+        actual.each_with_index.flat_map do |element, i|
+          element_comparison = expected.compare(element)
 
-          comparison = expected.compare(actual)
-
-          if !comparison.match?
-            mismatch_location = [i]
-            mismatch_actual = comparison.mismatches[0].actual
-            mismatch_expected = comparison.mismatches[0].expected
-            mismatch_location = [i] + comparison.mismatches[0].location
-            mismatches << Mismatch.new(mismatch_actual, mismatch_expected, mismatch_location)
+          element_comparison.mismatches.map do |mismatch|
+            Mismatch.at i, mismatch
           end
         end
-        mismatches
       end
     end
   end
 
   class Mismatch < Struct.new(:actual, :expected, :location)
+    def self.at(location, original)
+      new original.actual,
+          original.expected,
+          [location] + original.location
+    end
   end
 end
