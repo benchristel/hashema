@@ -8,11 +8,6 @@ module Hashema
     def inspect
       expected.inspect
     end
-
-    # TODO: expose subschemas for compilation
-    #def map_subschemas
-    #  # subclass implementations should yield
-    #end
   end
 
   class Comparison < Struct.new(:actual, :expected)
@@ -143,6 +138,7 @@ module Hashema
       private
 
       def find_mismatches
+        # TODO:
         # type_mismatch || (keyset_mismatches + value_mismatches)
         if Set.new(expected.keys.map(&method(:symbol_to_string))) ==
           Set.new(actual.keys.map(&method(:symbol_to_string)))

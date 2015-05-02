@@ -27,13 +27,9 @@ module Hashema
 
     private
 
-    def options
-      @options
-    end
-
     def compile_hash(hash)
       with_compiled_values = ::Hash[hash.map { |k, v| [k, compile(v)]}]
-      klass = options[:indifferent_access] ?
+      klass = @options[:indifferent_access] ?
         Hashema::HashWithIndifferentAccess :
         Hashema::Hash
       klass.new(with_compiled_values)
