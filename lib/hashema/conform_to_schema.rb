@@ -42,7 +42,7 @@ module Hashema
       end
 
       def validator_options
-        {with_indifferent_access: @with_indifferent_access}
+        {indifferent_access: @with_indifferent_access}
       end
     end
 

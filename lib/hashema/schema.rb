@@ -158,7 +158,7 @@ module Hashema
     end
   end
 
-  class Mismatch < Struct.new(:actual, :expected, :location, :message)
+  class Mismatch < Struct.new(:actual, :expected, :location, :verb)
     def self.at(location, original)
       new original.actual,
           original.expected,
@@ -166,8 +166,13 @@ module Hashema
     end
 
     def message
-      verb = super || "match\n\t#{expected.inspect}\nbut got\n\t#{actual.inspect}"
       "expected /#{location.join '/'} to #{verb}"
+    end
+
+    private
+
+    def verb
+      super || "match\n\t#{expected.inspect}\nbut got\n\t#{actual.inspect}"
     end
   end
 end

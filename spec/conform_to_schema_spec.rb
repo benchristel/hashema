@@ -86,7 +86,7 @@ describe "a hash" do
     end
   end
 
-  xcontext "when with_indifferent_access is called on the matcher" do
+  context "when with_indifferent_access is called on the matcher" do
     it "matches any hash whose keys convert to the same strings" do
       expect({foo: 1, 'bar' => 2})
           .to conform_to_schema('foo' => 1, bar: 2)
