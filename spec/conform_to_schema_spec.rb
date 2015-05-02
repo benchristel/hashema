@@ -85,6 +85,14 @@ describe "a hash" do
       expect({a: 1, 'b' => 2}).to conform_to_schema({a: 1, 'b' => 2})
     end
   end
+
+  xcontext "when with_indifferent_access is called on the matcher" do
+    it "matches any hash whose keys convert to the same strings" do
+      expect({foo: 1, 'bar' => 2})
+          .to conform_to_schema('foo' => 1, bar: 2)
+          .with_indifferent_access
+    end
+  end
 end
 
 describe "an array" do

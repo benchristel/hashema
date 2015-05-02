@@ -8,10 +8,16 @@ module Hashema
     class ConformToSchema
       def initialize(schema)
         @schema = schema
+        @with_indifferent_access = false
+      end
+
+      def with_indifferent_access
+        @with_indifferent_access = true
+        self
       end
 
       def matches?(actual)
-        @validator = Hashema::Validator.new(actual, @schema)
+        @validator = Hashema::Validator.new(actual, @schema, validator_options)
         @validator.valid?
       end
 
@@ -33,6 +39,10 @@ module Hashema
 
       def description
         "match schema\n#{@schema.inspect}"
+      end
+
+      def validator_options
+        {with_indifferent_access: @with_indifferent_access}
       end
     end
 

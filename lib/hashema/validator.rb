@@ -1,18 +1,64 @@
+require_relative './compiler'
+
 module Hashema
+  module Validatable
+    class Base
+      def initialize(value, schema)
+        @value.public_send(m, *args, &b)
+      end
+
+      def method_missing(m, *args, &b)
+        @value.public_send(m, *args, &b)
+      end
+    end
+
+    class Hash
+      def initialize(hash, schema)
+        @delegate = hash
+        @schema = schema
+      end
+
+      def valid?
+        Set.new(keys) == Set.new(schema.keys) &&
+        each_pair do |k, v|
+          Hashema::Validatable.make(v, schema[k]).valid?
+        end
+      end
+
+      def problem
+        if Set.new(keys) != Set.new(schema.keys)
+          "hash key mismatch"
+        elsif problem_child = find { not Hashema::Validatable.make(v, schema[k]).valid? }
+          problem_child.problem
+        else
+          "none"
+        end
+      end
+    end
+  end
+
   class Validator
-    def initialize(actual, schema)
+    def initialize(actual, schema, options={})
       @actual = actual
       @schema = schema
-      @withholding_judgement = false
+      @compiled_schema = compile @schema, options
       match! @actual, @schema
     end
 
+    def compile(schema, options={})
+      Hashema::Compiler.compile(schema, options)
+    end
+
     def valid?
-      !!@match
+      comparison.match?
     end
 
     def failure_message
-      @mismatch
+      comparison.mismatches[0].message
+    end
+
+    def comparison
+      @comparison ||= @compiled_schema.compare(@actual)
     end
 
     private
@@ -33,7 +79,7 @@ module Hashema
 
     def match_hash!(actual, schema, path)
       if actual.is_a? Hash
-        if Set.new(schema.keys) == Set.new(actual.keys)
+        if hash_key_sets_equal? Set.new(schema.keys), Set.new(actual.keys)
           match_hash_with_same_keys! actual, schema, path
         else
           report_mismatched_key_sets! actual, schema, path
@@ -44,10 +90,19 @@ module Hashema
       end
     end
 
+    def hash_key_sets_equal?(keys1, keys2)
+      if indifferent_access?
+        keys1.map(&:to_s) == keys2.map(&:to_s)
+      else
+        keys1 == keys2
+      end
+    end
+
     def match_hash_with_same_keys!(actual, schema, path)
       recording_mismatches actual, schema, path do
         actual.all? do |key, value|
-          match! value, schema[key], path + [key]
+          Validator.new(value, schema[key]).valid?
+          #match! value, schema[key], path + [key]
         end
       end
     end
@@ -115,6 +170,10 @@ module Hashema
 
     def format_path(path)
       "/#{path.join("/")}"
+    end
+
+    def indifferent_access?
+      @options[:with_indifferent_access]
     end
   end
 end
