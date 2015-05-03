@@ -65,43 +65,97 @@ module Hashema
     end
   end
 
-  class Hash < Schema
+  class Map < Schema
     class Comparison < Hashema::Comparison
 
       private
 
       def find_mismatches
-        type_mismatch || (keyset_mismatch + value_mismatches)
+        type_mismatch || (keyset_mismatches + value_mismatches)
       end
 
       def type_mismatch
-        expectation = "be a Hash, but got #{actual.class}"
-        actual.is_a?(::Hash) ? nil : [Mismatch.new(actual, ::Hash, [], expectation)]
+        expectation = "be a #{expected_class}, but got #{actual.class}"
+        actual.is_a?(expected_class) ?
+          nil :
+          [Mismatch.new(actual, expected_class, [], expectation)]
       end
 
-      def keyset_mismatch
-        if expected_keys != actual_keys
-          missing_keys_expectation = missing_keys.any? ? "\nmissing keys were:\n\t#{missing_keys.map(&:inspect).join("\n\t")}" : ''
-          extra_keys_expectation = extra_keys.any? ? "\nextra keys were:\n\t#{extra_keys.map(&:inspect).join("\n\t")}" : ''
-          expectation = "have a different set of keys" + missing_keys_expectation + extra_keys_expectation
-          [Mismatch.new(actual, expected, [], expectation)]
-        else
-          []
-        end
+      def expected_class
+        raise NotImplementedError.new "#{self.class.name} must implement expected_class"
       end
 
       def value_mismatches
-        actual.flat_map do |key, value|
-          if in? key, expected_keys
-            value_comparison = fetch(key, expected).compare(value)
+        matching_keys.flat_map do |key|
+          comparison = fetch(key, expected).compare(fetch(key, actual))
 
-            value_comparison.mismatches.map do |mismatch|
-              Mismatch.at key, mismatch
-            end
-          else
-            []
+          comparison.mismatches.map do |mismatch|
+            Mismatch.at key, mismatch
           end
         end
+      end
+
+      def keyset_mismatches
+        if extra_keys.empty? && missing_keys.empty?
+          []
+        else
+          missing_keys_expectation = missing_keys.any? ?
+            "\nmissing keys were:\n\t#{missing_keys.map(&:inspect).join("\n\t")}" :
+            ''
+
+          extra_keys_expectation = extra_keys.any? ?
+            "\nextra keys were:\n\t#{extra_keys.map(&:inspect).join("\n\t")}" :
+            ''
+
+          expectation = "have a different set of keys" +
+            missing_keys_expectation +
+            extra_keys_expectation
+
+          [Mismatch.new(actual, expected, [], expectation)]
+        end
+      end
+
+      def extra_keys
+        raise NotImplementedError.new "#{self.class.name} must implement extra_keys"
+      end
+
+      def missing_keys
+        raise NotImplementedError.new "#{self.class.name} must implement missing_keys"
+      end
+
+      def matching_keys
+        raise NotImplementedError.new "#{self.class.name} must implement matching_keys"
+      end
+
+      def fetch(key, from_map)
+        raise NotImplementedError.new "#{self.class.name} must implement fetch"
+      end
+    end
+  end
+
+  class Hash < Schema
+    class Comparison < Hashema::Map::Comparison
+
+      private
+
+      def expected_class
+        ::Hash
+      end
+
+      def extra_keys
+        @extra_keys ||= actual_keys - expected_keys
+      end
+
+      def missing_keys
+        @missing_keys ||= expected_keys - actual_keys
+      end
+
+      def matching_keys
+        @matching_keys ||= expected.keys & actual.keys
+      end
+
+      def fetch(key, hash)
+        hash[key]
       end
 
       def expected_keys
@@ -110,26 +164,6 @@ module Hashema
 
       def actual_keys
         @actual_keys ||= Set.new(actual.keys)
-      end
-
-      def extra_keys
-        @extra_keys ||= actual.keys.reject do |k|
-          in? k, expected_keys
-        end
-      end
-
-      def missing_keys
-        @missing_keys ||= expected.keys.reject do |k|
-          in? k, actual_keys
-        end
-      end
-
-      def in?(key, set)
-        set.include?(key)
-      end
-
-      def fetch(key, hash)
-        hash[key]
       end
     end
   end
@@ -154,25 +188,37 @@ module Hashema
   end
 
   class HashWithIndifferentAccess < Schema
-    class Comparison < Hashema::Hash::Comparison
+    class Comparison < Hashema::Map::Comparison
 
       private
 
-      def expected_keys
-        @expected_keys ||= Set.new(expected.keys.map(&method(:symbol_to_string)))
+      def expected_class
+        ::Hash
       end
 
-      def actual_keys
-        @actual_keys ||= Set.new(actual.keys.map(&method(:symbol_to_string)))
+      def extra_keys
+        @extra_keys ||= actual.keys.reject do |key|
+          expected.has_key? symbol_to_string key or
+            expected.has_key? string_to_symbol key
+        end
       end
 
-      def in?(key, set)
-        set.include?(symbol_to_string(key))
+      def missing_keys
+        @missing_keys ||= expected.keys.reject do |key|
+          actual.has_key? symbol_to_string key or
+            actual.has_key? string_to_symbol key
+        end
+      end
+
+      def matching_keys
+        @matching_keys ||=
+          Set.new(expected.keys.map(&method(:symbol_to_string))) &
+          Set.new(actual.keys.map(&method(:symbol_to_string)))
       end
 
       def fetch(key, hash)
-        return hash[symbol_to_string(key)] if hash.has_key? symbol_to_string(key)
-        return hash[string_to_symbol(key)] if hash.has_key? string_to_symbol(key)
+        return hash[symbol_to_string key] if hash.has_key? symbol_to_string key
+        return hash[string_to_symbol key] if hash.has_key? string_to_symbol key
       end
 
       def string_to_symbol(key)
@@ -181,6 +227,14 @@ module Hashema
 
       def symbol_to_string(key)
         key.is_a?(Symbol) ? key.to_s : key
+      end
+
+      def expected_keys
+        @expected_keys ||= Set.new(expected.keys.map(&method(:symbol_to_string)))
+      end
+
+      def actual_keys
+        @actual_keys ||= Set.new(actual.keys.map(&method(:symbol_to_string)))
       end
     end
   end
