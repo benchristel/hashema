@@ -83,11 +83,7 @@ module Hashema
       end
 
       def keyset_mismatch
-        expected_keys = Set.new(expected.keys)
-        actual_keys = Set.new(actual.keys)
         if expected_keys != actual_keys
-          missing_keys = expected_keys - actual_keys
-          extra_keys = actual_keys - expected_keys
           missing_keys_expectation = missing_keys.any? ? "\nmissing keys were:\n\t#{missing_keys.map(&:inspect).join("\n\t")}" : ''
           extra_keys_expectation = extra_keys.any? ? "\nextra keys were:\n\t#{extra_keys.map(&:inspect).join("\n\t")}" : ''
           expectation = "have a different set of keys" + missing_keys_expectation + extra_keys_expectation
@@ -99,8 +95,8 @@ module Hashema
 
       def value_mismatches
         actual.flat_map do |key, value|
-          if expected.has_key?(key)
-            value_comparison = expected[key].compare(value)
+          if in? key, expected_keys
+            value_comparison = fetch(key, expected).compare(value)
 
             value_comparison.mismatches.map do |mismatch|
               Mismatch.at key, mismatch
@@ -109,6 +105,34 @@ module Hashema
             []
           end
         end
+      end
+
+      def expected_keys
+        @expected_keys ||= Set.new(expected.keys)
+      end
+
+      def actual_keys
+        @actual_keys ||= Set.new(actual.keys)
+      end
+
+      def extra_keys
+        @extra_keys ||= actual.keys.reject do |k|
+          in? k, expected_keys
+        end
+      end
+
+      def missing_keys
+        @missing_keys ||= expected.keys.reject do |k|
+          in? k, actual_keys
+        end
+      end
+
+      def in?(key, set)
+        set.include?(key)
+      end
+
+      def fetch(key, hash)
+        hash[key]
       end
     end
   end
@@ -133,19 +157,29 @@ module Hashema
   end
 
   class HashWithIndifferentAccess < Schema
-    class Comparison < Hashema::Comparison
+    class Comparison < Hashema::Hash::Comparison
 
       private
 
-      def find_mismatches
-        # TODO:
-        # type_mismatch || (keyset_mismatches + value_mismatches)
-        if Set.new(expected.keys.map(&method(:symbol_to_string))) ==
-          Set.new(actual.keys.map(&method(:symbol_to_string)))
-          []
-        else
-          [Mismatch.new(actual, expected, [])]
-        end
+      def expected_keys
+        @expected_keys ||= Set.new(expected.keys.map(&method(:symbol_to_string)))
+      end
+
+      def actual_keys
+        @actual_keys ||= Set.new(actual.keys.map(&method(:symbol_to_string)))
+      end
+
+      def in?(key, set)
+        set.include?(symbol_to_string(key))
+      end
+
+      def fetch(key, hash)
+        return hash[symbol_to_string(key)] if hash.has_key? symbol_to_string(key)
+        return hash[string_to_symbol(key)] if hash.has_key? string_to_symbol(key)
+      end
+
+      def string_to_symbol(key)
+        key.is_a?(String) ? key.to_sym : key
       end
 
       def symbol_to_string(key)

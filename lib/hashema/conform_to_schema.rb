@@ -30,6 +30,7 @@ module Hashema
       end
 
       def failure_message_when_negated
+        # TODO: @actual is nil here. This probably doesn't work.
         "expected\n#{@actual.inspect}\nnot to match schema\n#{@schema.inspect}"
       end
 

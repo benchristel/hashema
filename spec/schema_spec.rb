@@ -1,4 +1,5 @@
 require_relative '../lib/hashema/schema'
+require_relative './support/look_like'
 
 module Hashema
   describe Atom do
@@ -198,19 +199,49 @@ module Hashema
   end
 
   describe HashWithIndifferentAccess do
-    it 'matches a hash whose keys convert to the same strings' do
-      schema = Hashema::HashWithIndifferentAccess.new(
-        foo: 1,
-        'bar' => 2,
-        'baz' => 3,
-        kludge: 4
+    let(:schema) do
+      Hashema::HashWithIndifferentAccess.new(
+        foo: Atom.new(1),
+        'bar' => Atom.new(2),
+        'baz' => Atom.new(3),
+        kludge: Atom.new(4)
       )
-
-      expect(schema.compare({foo: 1, bar: 2, 'baz' => 3, 'kludge' => 4})).to be_match
     end
 
-    it 'does not match a hash with a different set of keys' do
+    it 'matches a hash whose keys convert to the same strings' do
+      match = {foo: 1, bar: 2, 'baz' => 3, 'kludge' => 4}
+      expect(schema.compare(match)).to be_match
+    end
 
+    it 'complains about a hash with extra keys' do
+      extra_keys = {foo: 1, bar: 2, 'baz' => 3, 'kludge' => 4, extra: 5}
+      comparison = schema.compare(extra_keys)
+      expect(comparison).not_to be_match
+      expect(comparison.mismatches[0].message).to look_like %q(
+        expected / to have a different set of keys
+        extra keys were:
+        :extra
+      )
+    end
+
+    it 'complains about a hash with missing keys' do
+      missing_keys = {foo: 1, bar: 2, 'baz' => 3}
+      comparison = schema.compare(missing_keys)
+      expect(comparison).not_to be_match
+      expect(comparison.mismatches[0].message).to look_like %q(
+        expected / to have a different set of keys
+        missing keys were:
+        :kludge
+      )
+    end
+
+    it 'does not match if any value does not match' do
+      mismatch = {foo: 1, bar: 2, 'baz' => 3, 'kludge' => :mismatch}
+      comparison = schema.compare(mismatch)
+      expect(comparison).not_to be_match
+      expect(comparison.mismatches[0].message).to look_like %q(
+        expected /kludge to match 4 but got :mismatch
+      )
     end
   end
 end
