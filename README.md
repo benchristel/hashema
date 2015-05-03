@@ -104,7 +104,32 @@ expect(
 ```ruby
 expect(
   [{cash: '12.33'}, {credit: '28.95'}, {cash: '40.70'}]
-).to conform_to_schema [[{cash: /^\d+\.\d\d$/}, {credit: /^\d+\.\d\d$/}]]
+).to conform_to_schema(
+  [
+    [{cash: /^\d+\.\d\d$/}, {credit: /^\d+\.\d\d$/}]
+  ]
+)
+```
+
+## RSpec matcher options
+
+### with_indifferent_access
+
+Rails fans will be familiar with ActiveSupport's `HashWithIndifferentAccess`, which treats symbol and string keys as interchangeable. Calling `with_indifferent_access` on the `conform_to_schema` matcher will make the matcher similarly tolerant, allowing you to match a hash with string keys against a schema with symbol keys. This is especially useful when writing schemas for JSON, since parsed objects will always have string keys.
+
+```ruby
+get :show
+
+schema = {
+  url: /^https?:\/\/.+/,
+  posts: [
+    { title: String,
+      published: [true, false]
+    }
+  ]
+}
+
+expect(JSON(response.body)).to conform_to_schema(schema).with_indifferent_access
 ```
 
 ## Hashema without RSpec
