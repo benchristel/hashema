@@ -40,11 +40,8 @@ module Hashema
   end
 
   class Array < Schema
-    def map_subschemas
-      expected.map { |x| yield x }
-    end
-
     class Comparison < Hashema::Comparison
+
       private
 
       def find_mismatches
