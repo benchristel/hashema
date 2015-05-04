@@ -243,14 +243,13 @@ module Hashema
     def self.at(location, original)
       new original.actual,
           original.expected,
-          [location] + original.location
+          [location] + original.location,
+          original.verb
     end
 
     def message
       "expected /#{location.join '/'} to #{verb}"
     end
-
-    private
 
     def verb
       super || "match\n\t#{expected.inspect}\nbut got\n\t#{actual.inspect}"

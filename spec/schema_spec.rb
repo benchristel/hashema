@@ -169,6 +169,8 @@ module Hashema
       expect(mismatches[0].actual).to eq 'squirrel'
       expect(mismatches[0].expected).to eq Numeric
       expect(mismatches[0].location).to eq [:foo, 1, :bar]
+
+      expect(mismatches[1].message).to include 'have a different set of keys'
     end
   end
 
