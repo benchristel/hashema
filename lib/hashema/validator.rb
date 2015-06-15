@@ -4,8 +4,7 @@ module Hashema
   class Validator
     def initialize(actual, schema, options={})
       @actual = actual
-      @schema = schema
-      @schema = compile schema, options
+      @schema = Compiler.compile schema, options
     end
 
     def valid?
@@ -17,10 +16,6 @@ module Hashema
     end
 
     private
-
-    def compile(schema, options={})
-      Hashema::Compiler.compile(schema, options)
-    end
 
     def comparison
       @comparison ||= @schema.compare(@actual)
