@@ -1,3 +1,5 @@
+require "set"
+
 module Hashema
   class Schema < Struct.new(:expected)
     # A Schema is a Comparison factory.
