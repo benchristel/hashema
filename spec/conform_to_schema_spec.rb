@@ -93,6 +93,47 @@ describe "a hash" do
           .with_indifferent_access
     end
   end
+
+  context "when a key is optional" do
+    let(:schema) do
+      {a: 1, optional: Hashema::Optional(2)}
+    end
+
+    it "does what the README says" do
+      expect({entree: "eggs"})
+        .to conform_to_schema({entree: String, side: Hashema::Optional(String)})
+    end
+
+    it "matches a hash that has the optional key with the correct value" do
+      expect({a: 1, optional: 2}).to conform_to_schema schema
+    end
+
+    it "matches a hash that lacks the optional key" do
+      expect({a: 1}).to conform_to_schema schema
+    end
+
+    it "does not match a hash that has the optional key with the wrong value" do
+      expect({a: 1, optional: nil}).not_to conform_to_schema schema
+    end
+
+    it "does not match a hash with indifferent access that has the optional key with the wrong value" do
+      expect({a: 1, "optional" => nil}).not_to conform_to_schema(schema).with_indifferent_access
+    end
+
+    it "matches a hash with indifferent access that lacks the optional key" do
+      expect({a: 1}).to conform_to_schema(schema).with_indifferent_access
+    end
+
+    it "matches a hash with indifferent access that has the optional key" do
+      expect({a: 1, "optional" => 2}).to conform_to_schema(schema).with_indifferent_access
+    end
+  end
+end
+
+describe "an optional value" do
+  it "only makes sense as a value in a hash" do
+    expect(nil).not_to conform_to_schema Hashema::Optional(1)
+  end
 end
 
 describe "an array" do

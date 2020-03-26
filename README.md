@@ -111,6 +111,13 @@ expect(
 )
 ```
 
+### Making a hash key optional
+
+```ruby
+expect({entree: "eggs"})
+  .to conform_to_schema({entree: String, side: Hashema::Optional(String)})
+```
+
 ## RSpec matcher options
 
 ### with_indifferent_access

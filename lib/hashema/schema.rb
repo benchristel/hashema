@@ -7,6 +7,10 @@ module Hashema
       self.class.const_get('Comparison').new(actual, expected)
     end
 
+    def required_if_map_value?
+      true
+    end
+
     def inspect
       expected.inspect
     end
@@ -149,7 +153,7 @@ module Hashema
       end
 
       def missing_keys
-        @missing_keys ||= expected_keys - actual_keys
+        @missing_keys ||= demanded_keys - actual_keys
       end
 
       def matching_keys
@@ -162,6 +166,12 @@ module Hashema
 
       def expected_keys
         @expected_keys ||= Set.new(expected.keys)
+      end
+
+      def demanded_keys
+        @demanded_keys ||= Set.new(expected_keys.select { |key|
+          fetch(key, expected).required_if_map_value?
+        })
       end
 
       def actual_keys
@@ -200,15 +210,13 @@ module Hashema
 
       def extra_keys
         @extra_keys ||= actual.keys.reject do |key|
-          expected.has_key? symbol_to_string key or
-            expected.has_key? string_to_symbol key
+          has_key?(key, expected)
         end
       end
 
       def missing_keys
-        @missing_keys ||= expected.keys.reject do |key|
-          actual.has_key? symbol_to_string key or
-            actual.has_key? string_to_symbol key
+        @missing_keys ||= expected.keys.select do |key|
+          !has_key?(key, actual) and fetch(key, expected).required_if_map_value?
         end
       end
 
@@ -216,6 +224,10 @@ module Hashema
         @matching_keys ||=
           Set.new(expected.keys.map(&method(:symbol_to_string))) &
           Set.new(actual.keys.map(&method(:symbol_to_string)))
+      end
+
+      def has_key?(key, hash)
+        hash.has_key?(symbol_to_string key) or hash.has_key?(string_to_symbol key)
       end
 
       def fetch(key, hash)
@@ -237,6 +249,21 @@ module Hashema
 
       def actual_keys
         @actual_keys ||= Set.new(actual.keys.map(&method(:symbol_to_string)))
+      end
+    end
+  end
+
+  class OptionalValueInHash < Schema
+    def required_if_map_value?
+      false
+    end
+
+    class Comparison < Hashema::Comparison
+
+      private
+
+      def find_mismatches
+        expected.compare(actual).mismatches
       end
     end
   end

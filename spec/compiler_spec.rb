@@ -27,6 +27,16 @@ module Hashema
       )
     end
 
+    it "compiles an Optional to an OptionalValueInHash schema" do
+      schema = Hashema::Optional(1)
+      expect(Compiler.compile(schema)).to eq OptionalValueInHash.new(Atom.new(1))
+    end
+
+    it "compiles the value wrapped by an Optional" do
+      schema = Hashema::Optional({foo: 1})
+      expect(Compiler.compile(schema)).to eq OptionalValueInHash.new(Hashema::Hash.new({foo: Atom.new(1)}))
+    end
+
     context 'opting for indifferent_access: true' do
       it 'compiles a hash into a Hashema::HashWithIndifferentAccess' do
         compiled = Compiler.compile({foo: 1}, indifferent_access: true)

@@ -12,6 +12,8 @@ module Hashema
 
     def compile(thing)
       case thing
+      when Hashema::Optional
+        Hashema::OptionalValueInHash.new(compile(thing.expected))
       when ::Array
         if thing.size == 1
           Hashema::Array.new(compile(thing[0]))

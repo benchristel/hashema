@@ -149,5 +149,36 @@ describe Hashema::Validator do
         expect(message).to include '/users/0/email'
       end
     end
+
+    context "when the schema makes a value optional" do
+      let :object do
+        {
+          name: "Bob",
+          address: 123
+        }
+      end
+
+      let :schema do
+        {
+          name: String,
+          address: Hashema::Optional(String)
+        }
+      end
+
+      it "reports a mismatch" do
+        expect(message).to eq "expected /address to match String but got 123"
+      end
+
+      context "and there are missing keys" do
+        let :object do
+          {}
+        end
+
+        it "does not list the optional key as missing" do
+          expect(message).to include "missing keys were: :name"
+          expect(message).not_to include "address"
+        end
+      end
+    end
   end
 end
